@@ -1,6 +1,9 @@
 var express = require('express'), 
     app = express(),
-    bodyParser = require('body-parser');
+    bodyParser = require('body-parser'),
+    redisQueue = require('./helper/redis-queue');
+    
+redisQueue.initializeWorkers();
     
 app.use(bodyParser.json()); // for parsing application/json
 app.use(bodyParser.urlencoded({ extended: true })); // for parsing application/x-www-form-urlencoded

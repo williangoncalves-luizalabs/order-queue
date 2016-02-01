@@ -4,3 +4,9 @@ var app = require("./src/app"),
     server = app.listen(config.server.port);
     
 console.log("Listening on port " + config.server.port);
+
+
+//THINGS TO DO
+//- LOG
+//- DOCUMENTATION
+//- TEST

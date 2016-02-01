@@ -6,7 +6,7 @@ var validateSendMessageRequest = Promise.method(function validateSendMessageRequ
   var schema = joi.object().keys({
     url: joi.string().required(),
     method: joi.string().required().valid([ 'GET', 'get', 'POST', 'post', 'PUT', 'put', 'DELETE', 'delete' ]),
-    headers: joi.array().optional(),
+    headers: joi.object().optional(),
     body: joi.object().required()
   });
   

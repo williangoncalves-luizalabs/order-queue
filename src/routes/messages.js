@@ -4,7 +4,6 @@ var redisClient = require('../helper/redis-queue');
 var validations = require('../validations/messages');
 
 function sendMessage(req, res, next){
-  
   var message = req.body;
   var queueName = req.params.queueName;
   
