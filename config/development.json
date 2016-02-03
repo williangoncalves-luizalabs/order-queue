@@ -2,9 +2,21 @@
   "redis": {
     "host": "127.0.0.1",
     "port": 6379,
-    "queues": [ "test_queue" ]
+    "queue": "test_queue"
   },
   "server": {
     "port": 3000
+  },
+  "log" : {
+    "name": "Teste",
+  	"level": "trace",
+  	"streams": [
+      {
+    		"type": "rotating-file",
+    		"path": "../logs/api.log",
+    		"period": "1d",
+    		"count": 7
+    	}
+    ]
   }
 }

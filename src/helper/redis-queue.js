@@ -1,23 +1,18 @@
-var conf = require('node-conf'),
-    config = conf.load(process.env.NODE_ENV),
+var config = require('node-conf').load(process.env.NODE_ENV).redis,
     Promise = require('bluebird'),
     RSMQ = require('rsmq'),
     rsmq = Promise.promisifyAll(new RSMQ({ 
-      host: config.redis.host, 
-      port: config.redis.port
+      host: config.host, 
+      port: config.port
     })),
     RSMQWorker = require('rsmq-worker'),
-    validQueues = config.redis.queues,
     _ = require('lodash'),
     request = Promise.promisifyAll(require("request"));
     
-var sendMessageToQueue = Promise.method(function sendMessage(msg, queue){
-  if(!isValidQueue(queue))
-    throw new Error('This is not a valid queue');
-    
-  return createQueue(queue)
+var sendMessageToQueue = Promise.method(function sendMessage(msg){    
+  return createQueue(config.queue)
     .then(function sendMessage(){
-      return rsmq.sendMessageAsync({ message: JSON.stringify(msg), qname: queue });
+      return rsmq.sendMessageAsync({ message: JSON.stringify(msg), qname: config.queue });
     })
     .then(function getMessageId(messageId){
       return messageId;
@@ -27,11 +22,6 @@ var sendMessageToQueue = Promise.method(function sendMessage(msg, queue){
     });
 });
 
-function isValidQueue(queue) {
-  return _.some(validQueues, function(validQueue){
-    return queue === validQueue;
-  });
-}
 
 var createQueue = Promise.method(function createQueue(queueName){
   return rsmq.listQueuesAsync().then(function (createdQueues){
@@ -54,29 +44,39 @@ var createQueue = Promise.method(function createQueue(queueName){
 });
 
 var initializeWorkers = Promise.method(function initializeWorkers() {
-    _.each(validQueues, function (queueToListen){
-        var worker = new RSMQWorker(queueToListen,{
-           autostart: true,
-           invisibletime: 2,
-           interval: [ .1, 1 ],
-           rsmq: rsmq
-        });
-        
-        worker.on('error', function( err, msg ){
-                console.log( "ERROR", err, msg.id );
-        });
-        
-        worker.on('timeout', function( msg ){
-            console.log( "TIMEOUT", msg.id, msg.rc );
-        });
-        
-        worker.on('message', processMessage);
-    });
+  var worker = new RSMQWorker(config.queue, {
+     autostart: true,
+     invisibletime: 2,
+     interval: [ .1, 1 ],
+     rsmq: rsmq
+  });
+  
+  worker.on('error', function(err, msg){
+    console.log("ERROR", err, msg.id);
+  });
+  
+  worker.on('timeout', function(msg){
+    console.log("TIMEOUT", msg.id, msg.rc);
+  });
+
+  worker.on('exceeded', notifySlack);
+
+  worker.on('message', processMessage);
 });
+
+function notifySlack(msg) {
+  console.log("message exceed: " + JSON.stringify(msg));
+  rsmq.deleteMessageAsync({ qname: config.queue, id: msg.id })
+    .then(function(resp) {
+      if(resp == 1) console.log('message deleted: ' + JSON.stringify(msg));
+    })
+    .catch(function(err){
+      throw err;
+    });
+}
 
 function processMessage(message, next, id) {
     var queueMessage = JSON.parse(message);
-    console.log(queueMessage);
     var options = {
       url: queueMessage.url,
       method: queueMessage.method,

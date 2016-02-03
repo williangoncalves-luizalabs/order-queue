@@ -5,11 +5,10 @@ var validations = require('../validations/messages');
 
 function sendMessage(req, res, next){
   var message = req.body;
-  var queueName = req.params.queueName;
   
   return validations.validateSendMessageRequest(message)
     .then(function (validateMessage){
-      return redisClient.sendMessage(validateMessage, queueName);
+      return redisClient.sendMessage(validateMessage);
     })
     .then(function(messageId){
       return res.status(200).send({ id: messageId })
@@ -19,6 +18,6 @@ function sendMessage(req, res, next){
     });
 }
 
-router.post('/:queueName', sendMessage);
+router.post('/', sendMessage);
 
 module.exports = router;

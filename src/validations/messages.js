@@ -7,7 +7,7 @@ var validateSendMessageRequest = Promise.method(function validateSendMessageRequ
     url: joi.string().required(),
     method: joi.string().required().valid([ 'GET', 'get', 'POST', 'post', 'PUT', 'put', 'DELETE', 'delete' ]),
     headers: joi.object().optional(),
-    body: joi.object().required()
+    body: joi.object().optional()
   });
   
   var vr = joi.validate(message, schema);
