@@ -1,18 +1,21 @@
-var config = require('node-conf').load(process.env.NODE_ENV).redis,
+var config = require('node-conf').load(process.env.NODE_ENV),
     Promise = require('bluebird'),
     RSMQ = require('rsmq'),
     rsmq = Promise.promisifyAll(new RSMQ({ 
-      host: config.host, 
-      port: config.port
+      host: config.redis.host, 
+      port: config.redis.port
     })),
     RSMQWorker = require('rsmq-worker'),
     _ = require('lodash'),
-    request = Promise.promisifyAll(require("request"));
+    request = Promise.promisifyAll(require("request")),
+    Slack = require('node-slack'),
+    slack = new Slack(config.slack.hookUrl);
+
     
 var sendMessageToQueue = Promise.method(function sendMessage(msg){    
-  return createQueue(config.queue)
+  return createQueue(config.redis.queue)
     .then(function sendMessage(){
-      return rsmq.sendMessageAsync({ message: JSON.stringify(msg), qname: config.queue });
+      return rsmq.sendMessageAsync({ message: JSON.stringify(msg), qname: config.redis.queue });
     })
     .then(function getMessageId(messageId){
       return messageId;
@@ -44,7 +47,7 @@ var createQueue = Promise.method(function createQueue(queueName){
 });
 
 var initializeWorkers = Promise.method(function initializeWorkers() {
-  var worker = new RSMQWorker(config.queue, {
+  var worker = new RSMQWorker(config.redis.queue, {
      autostart: true,
      invisibletime: 2,
      interval: [ .1, 1 ],
@@ -65,14 +68,35 @@ var initializeWorkers = Promise.method(function initializeWorkers() {
 });
 
 function notifySlack(msg) {
-  console.log("message exceed: " + JSON.stringify(msg));
-  rsmq.deleteMessageAsync({ qname: config.queue, id: msg.id })
-    .then(function(resp) {
-      if(resp == 1) console.log('message deleted: ' + JSON.stringify(msg));
-    })
-    .catch(function(err){
-      throw err;
+  if((JSON.parse(msg.message).exceedTime || 0) > 0) {
+    slack.send({
+      text: msg.message,
+      channel: '#general',
+      username: 'order-queue-bot' 
     });
+
+    rsmq.deleteMessageAsync({ qname: config.redis.queue, id: msg.id })
+      .then(function(resp) {
+        if(resp == 1) {
+          console.log('message deleted: ' + JSON.stringify(msg));
+        }
+      })
+      .catch(function(err){
+        throw err;
+      });
+  } else {
+    var message  = JSON.parse(msg.message);
+    message.exceedTime  = message.exceedTime ? message.exceedTime + 1 : 1;
+    rsmq.sendMessageAsync({ message: JSON.stringify(message), qname: config.redis.queue, delay: config.slack.delay })
+      .then(function(resp){
+        if(resp == 1) {
+          console.log('message reprocessing: ' + JSON.stringify(msg));
+        }
+      })
+      .catch(function(err){
+        throw err;
+      });
+  }
 }
 
 function processMessage(message, next, id) {

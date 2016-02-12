@@ -18,5 +18,11 @@
     		"count": 7
     	}
     ]
+  },
+  "slack": {
+      "hookUrl": "https://hooks.slack.com/services/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",
+      "username": "order-queue-message",
+      "channel": "#general",
+      "delayExceed": 3600
   }
 }
