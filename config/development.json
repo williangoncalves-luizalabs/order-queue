@@ -2,7 +2,15 @@
   "redis": {
     "host": "127.0.0.1",
     "port": 6379,
-    "queue": "test_queue"
+    "options": {
+      "enable_offline_queue": true
+    }
+  },
+  "queue": {
+    "queue_name": "test_queue",
+    "exceed_time": 2,
+    "exceed_queue": "exceed_queue",
+    "delayExceed": 0
   },
   "server": {
     "port": 3000
@@ -20,9 +28,8 @@
     ]
   },
   "slack": {
-      "hookUrl": "https://hooks.slack.com/services/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",
+      "hookUrl": "",
       "username": "order-queue-message",
-      "channel": "#general",
-      "delayExceed": 3600
+      "channel": "#general"
   }
 }

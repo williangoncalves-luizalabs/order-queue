@@ -1,6 +1,6 @@
 var express = require('express');
 var router = express.Router();
-var redisClient = require('../helper/redis-queue');
+var redisClient = require('../libs/rsmq-queue');
 var validations = require('../validations/messages');
 
 function sendMessage(req, res, next){

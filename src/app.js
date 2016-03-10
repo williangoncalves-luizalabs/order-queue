@@ -1,11 +1,13 @@
 var express = require('express'), 
     app = express(),
     bodyParser = require('body-parser'),
-    redisQueue = require('./helper/redis-queue');
+    redisConfig = require('node-conf').load(process.env.NODE_ENV).redis;
+
 
 
 // logger.init();
-redisQueue.initializeWorkers();
+require('mll-redis').configureFactory(redisConfig);
+require('./libs/rsmq-queue').initializeWorkers();
 
 app.use(require('express-bunyan-logger').errorLogger());
 app.use(require('express-bunyan-logger')({
